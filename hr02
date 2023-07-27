@@ -1,0 +1,248 @@
+show user;
+-- 1. 파라미터 확인
+select *
+from NLS_SESSION_PARAMETERS;
+
+-- 2. 테이블 생성해서 RR/YY 비교
+create table exam
+(a date, b date); --a컬럼과 b컬럼을 만들고, 데이터 타입은 date
+
+insert into exam (a, b)
+values ( to_date('15/01/01', 'RR/MM/DD'), to_date('15/01/01', 'YY/MM/DD') );
+
+select to_char(a,'RRRR'), to_char(b,'YYYY')
+from EXAM;
+
+-- 시스템의 년도를 1995년도로 변경
+insert into exam (a, b)
+values ( to_date('15/01/01', 'RR/MM/DD'), to_date('15/01/01', 'YY/MM/DD') );
+
+select to_char(a,'RRRR'), to_char(b,'YYYY')
+from EXAM;
+
+-- 3. SYSDATE 현재 날짜 반환
+SELECT SYSDATE, SYSTIMESTAMP
+FROM dual;
+
+-- 연산 가능
+SELECT SYSDATE 오늘, SYSDATE+1 내일, SYSDATE-1 어제
+FROM dual;
+
+SELECT last_name, hire_date, TRUNC((sysdate-hire_date)/365) "년"
+FROM employees
+ORDER BY 3 desc; --ORDER BY TRUNC((sysdate-hire_date)/365) desc; // ORDER BY 년 desc;
+
+-- 4. MONTHS_BETWEEN : 지정된 두 날짜의 개월 수 반환
+SELECT last_name, hire_date, TRUNC(MONTHS_BETWEEN(sysdate, hire_date)) "근무 월수"
+FROM employees
+ORDER BY 3 desc;
+
+-- 5. ADD_MONTHS : 월 더하기 및 빼기
+SELECT sysdate 현재, ADD_MONTHS(sysdate,1) 다음달,
+ ADD_MONTHS(sysdate,-1) 이전달
+FROM dual;
+
+-- 6. NEXT_DAY : 지정된 날짜 기준에 가장 가까운 요일의 날짜 반환
+SELECT SYSDATE, NEXT_DAY(sysdate,'토'), NEXT_DAY(sysdate,'토요일'), NEXT_DAY(sysdate,7)
+FROM dual;
+
+-- 7. LAST_DAY : 지정된 날짜의 월의 마지막 날짜 반환
+SELECT SYSDATE, LAST_DAY(sysdate), LAST_DAY(ADD_MONTHS(sysdate, 5))
+FROM dual;
+
+-- 8. ROUND : 년도 및 월 반올림
+SELECT last_name, hire_date, 
+ ROUND(hire_date,'YEAR'),
+ ROUND(hire_date,'MONTH')
+FROM employees;
+
+-- 9. TRUNC : 년도 및 월 절삭
+SELECT last_name, hire_date, 
+ TRUNC(hire_date,'YEAR'),
+ TRUNC(hire_date,'MONTH')
+FROM employees;
+
+-- 10. 변환함수
+desc EMPLOYEES; -- 테이블 확인
+
+-- 1) 자동 형변환
+SELECT last_name, salary
+FROM employees
+WHERE salary = '17000'; --문자 -> 숫자
+
+SELECT last_name, salary
+FROM employees
+WHERE HIRE_DATE = '03/06/17'; --문자 -> 날짜
+
+-- 2) 명시적 형변환
+-- 2-1) to_char : 날짜 --> 문자
+SELECT SYSDATE, to_char(sysdate, 'yyyy'), to_char(sysdate, 'mm')
+from dual;
+
+SELECT SYSDATE, to_char(sysdate, 'yyyy-mm-dd mon day dy')
+from dual;
+
+SELECT SYSDATE, to_char(sysdate, 'yyyy"년"mm"월"dd"일"')
+from dual;
+
+SELECT TO_CHAR(SYSDATE, 'YYYY/MM/DD,(AM) DY HH24:MI:SS')
+FROM dual;
+
+-- 날짜에서 특정년도만 추출, 월만 추출, 일만 추출
+select sysdate, to_char(sysdate, 'YYYY'), to_char(sysdate, 'MM')
+from dual;
+
+--EXTRACT
+select sysdate, extract(year from sysdate),
+                extract(month from sysdate),
+                extract(day from sysdate),
+                extract(hour from systimestamp),
+                extract(minute from systimestamp),
+                extract(second from systimestamp)
+                         
+from dual;
+
+SELECT last_name,hire_date, salary
+FROM employees
+WHERE TO_CHAR(hire_date, 'MM')='09';
+
+SELECT last_name,hire_date, salary
+FROM employees
+WHERE extract(month from hire_date)='09';
+
+-- 2-2) TO_CHAR : 숫자 --> 문자
+
+SELECT last_name, salary, 
+ TO_CHAR(salary, '$999,999') 달러,
+ TO_CHAR(salary, 'L999,999') 원화 
+FROM employees;
+
+select to_char(987654321,'L999,999,999')
+from dual;
+
+-- 2-3) TO_NUMBER : 문자 --> 숫자
+SELECT TO_NUMBER('123') + 100 
+FROM dual;
+
+SELECT TO_NUMBER('123,456', '999,999') + 100 
+FROM dual;
+
+SELECT TO_NUMBER('$123,456', '$999,999') + 100 
+FROM dual;
+
+-- 2-4) 문자 --> 날짜
+--포맷 바꾸기
+ALTER SESSION SET NLS_DATE_FORMAT='YYYY/MM/DD HH24:MI:SS';
+
+SELECT TO_DATE( '20230802181030' , 'YYYYMMDDHH24MISS' )
+FROM dual;
+
+SELECT TO_DATE( '2023년08월02일' , 'YYYY"년"MM"월"DD"일"' ) --포맷을 지정해주어야 무슨 데이터인지 식별가능
+FROM dual;
+
+SELECT SYSDATE, trunc(SYSDATE-TO_DATE( '20170801' , 'YYYYMMDD' ))
+FROM dual;
+
+--실제 DB에 날짜를 저장한다면?
+--가. 20230802 -> row data 형태 권장
+--나. 2023년08월02일 -> 문제 : 저장크기 더 필요함. 출력시 포맷 변경이 제한적임. Locale(지역화)
+
+-- 11. 조건 함수
+
+-- 1) DECODE
+SELECT last_name, salary, DECODE(salary,24000, salary*0.3,
+                                        17000, salary*0.2,
+                                        salary) 보너스
+FROM employees
+ORDER BY 2 desc;
+
+SELECT COUNT(*) "총인원수",
+ SUM(DECODE(TO_CHAR(hire_date, 'YYYY'), 2001, 1, 0)) "2001",
+ SUM(DECODE(TO_CHAR(hire_date, 'YYYY'), 2002, 1, 0)) "2002",
+ SUM(DECODE(TO_CHAR(hire_date, 'YYYY'), 2003, 1, 0)) "2003",
+ SUM(DECODE(TO_CHAR(hire_date, 'YYYY'), 2004, 1, 0)) "2004",
+ SUM(DECODE(TO_CHAR(hire_date, 'YYYY'), 2005, 1, 0)) "2005",
+ SUM(DECODE(TO_CHAR(hire_date, 'YYYY'), 2006, 1, 0)) "2006",
+ SUM(DECODE(TO_CHAR(hire_date, 'YYYY'), 2007, 1, 0)) "2007",
+ SUM(DECODE(TO_CHAR(hire_date, 'YYYY'), 2008, 1, 0)) "2008"
+FROM employees;
+
+-- 2) CASE : ANSI SQL, 동등비교
+SELECT last_name,salary, CASE salary WHEN 24000 THEN salary*0.3
+                                     WHEN 17000 THEN salary*0.2
+                                     ELSE salary 
+                                     END as 보너스
+FROM employees
+ORDER BY 2 desc;
+
+-- 2) CASE : ANSI SQL, 부등비교
+SELECT last_name,salary, CASE WHEN salary >=20000 THEN 1000
+                              WHEN salary >=15000 THEN 2000
+                              WHEN salary >=10000 THEN 3000
+                              ELSE 4000 
+                              END as 보너스
+FROM employees
+ORDER BY 2 desc;
+
+SELECT last_name,salary, CASE WHEN salary BETWEEN 20000 AND 25000 THEN '상'
+                              WHEN salary BETWEEN 10000 AND 20001 THEN '중'
+                              ELSE '하'
+                              END as 등급
+FROM employees
+ORDER BY 2 desc;
+
+SELECT last_name,salary, CASE WHEN salary IN ( 24000, 17000 , 14000) THEN '상'
+                              WHEN salary IN ( 13500, 13000) THEN '중'
+                              ELSE '하'
+                              END 등급
+FROM employees
+ORDER BY 2 desc;
+
+-- 12. 그룹 함수
+-- 1) 자동 그룹핑
+-- SUM , AVG , MAX , MIN
+SELECT SUM(DISTINCT salary),SUM(ALL salary), SUM(salary) --ALL이 기본값
+FROM employees;
+
+SELECT Min(hire_date), Max(hire_date)
+from EMPLOYEES;
+
+--COUNT : 레코드 (행)의 개수 반환
+SELECT COUNT (*), COUNT(last_name), COUNT(commission_pct) --null값 제외
+FROM employees;
+
+select SUM(salary), AVG(salary), MAX(salary), MIN(salary), COUNT (*)
+from employees;
+
+-- 2) 명시적 그룹핑
+select max (SALARY)"월급짱", DEPARTMENT_ID , count(*)
+from employees
+group by department_id
+order by 2;
+
+--**주의1. select절에는 그룹 함수로 적용된 
+--SELECT department_id, SUM(salary) --에러, 107개의 레코드와 1개의 레코드를 같이 보여줄 수 없음
+--FROM employees;
+
+--**주의2. where절에는 그룹 함수를 못씀 (grouping 전에 실행되는 문장이기 때문)
+SELECT department_id ,SUM(salary)
+FROM employees
+where SUM(salary) > 30000
+group by department_id;
+
+SELECT department_id as id ,SUM(salary)
+FROM employees
+--where SUM(salary) > 30000
+group by department_id
+having SUM(salary) > 30000;
+
+--**주의3. group by 에서는 컬럼 순서 및 별칭 사용 불가 //order by와는 다름
+SELECT department_id as id ,SUM(salary)
+FROM employees
+group by id
+having SUM(salary) > 30000;
+
+SELECT department_id as id ,SUM(salary)
+FROM employees
+group by 1
+having SUM(salary) > 30000;
