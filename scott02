@@ -1,0 +1,285 @@
+show user;
+
+-- 테이블 수정
+CREATE TABLE emp04
+AS
+SELECT * FROM emp;
+
+select *
+from emp04;
+
+-- 1. 컬럼 삽입
+ALTER TABLE emp04
+ADD ( email VARCHAR2(10) , address VARCHAR2(20) );
+
+-- 2. 컬럼 수정
+-- 1) 컬럼 데이터 크기 변경
+ALTER TABLE emp04
+MODIFY ( email VARCHAR2(40) );
+
+ALTER TABLE emp04
+MODIFY ( email VARCHAR2(5) ); -- 작은 데이터로의 변경은 저장된 데이터값을 침해하지 않으면 가능
+
+-- 2) 데이터 타입 변경 가능
+ALTER TABLE emp04
+MODIFY ( email NUMBER(5) );
+
+desc emp04;
+
+-- 3) 컬럼 삭제
+ALTER TABLE emp04
+DROP ( email );
+
+-- 4) 제약 조건 추가
+-- 테이블 생성
+CREATE TABLE dept03
+( deptno NUMBER(2),
+ dname VARCHAR2(15),
+ loc VARCHAR2(15)
+);
+
+-- NOT NULL 제외 사용 가능한 제약 조건 추가 방법
+ALTER TABLE dept03
+ADD CONSTRAINT dept03_deptno_pk PRIMARY KEY (deptno);
+
+ALTER TABLE dept03
+ADD CONSTRAINT dept03_loc_uk UNIQUE (loc);
+
+-- NOT NULL 제약조건 추가 방법 , 컬럼레벨만 가능하기 때문에 컬럼이 필요
+-- NOT NULL로의 변경은 추가 작업이 아니라 변경 작업임
+ALTER TABLE dept03
+MODIFY ( dname VARCHAR2(15) CONSTRAINT dept_dname_nn NOT NULL );
+
+-- 5) 제약 조건 삭제
+ALTER TABLE dept03
+DROP PRIMARY KEY; --유일한 값이기 때문에 제약조건 이름을 명시하지 않아도 됨
+
+ALTER TABLE dept03
+DROP UNIQUE (loc); --unique(컬럼명) 으로 삭제 가능
+
+ALTER TABLE dept03
+DROP CONSTRAINT dept_dname_nn;
+
+SELECT *
+FROM USER_CONSTRAINTS
+WHERE TABLE_NAME = 'DEPT03';
+
+-- fk 연결되어 있는 master의 primary key 삭제
+
+select *
+from user_constraints
+where table_name = 'M2';
+
+select *
+from user_constraints
+where table_name = 'S2';
+
+alter table m2
+drop PRIMARY KEY; --오류 "this unique/primary key is referenced by some foreign keys"
+
+-- Cascade
+alter table m2
+drop PRIMARY KEY CASCADE;
+
+-- Data Dictionary
+
+-- SQL 객체
+-- 1. View
+select *
+from user_tables;
+
+select *
+from user_indexes;
+
+select *
+from user_sequences;
+
+select *
+from user_synonyms;
+
+-- 복잡한 SQL 문
+SELECT empno,ename, d.dname, d.deptno
+FROM emp e JOIN dept d
+ON e.deptno = d.deptno
+WHERE e.deptno = 20;
+
+-- 1) 단순화 목적
+CREATE VIEW emp_view -- scott계정은 view를 생성할 수 있는 권한x / 관리자 계정에서 권한 부여 필수
+AS
+SELECT empno,ename, d.dname, d.deptno
+FROM emp e JOIN dept d
+ON e.deptno = d.deptno
+WHERE e.deptno = 20;
+
+-- 별칭 부여
+CREATE VIEW emp_view10 ( no, name, dname, dno )
+AS
+SELECT empno,ename, d.dname, d.deptno
+FROM emp e JOIN dept d
+ON e.deptno = d.deptno
+WHERE e.deptno = 20;
+
+--view 실행
+select *
+from emp_view10;
+
+-- 2) 테이블의 특정 컬럼 보호 목적
+-- emp의 sal이 민감한 데이터라고 가정
+CREATE VIEW emp_view2
+AS
+SELECT empno,ename,job,mgr,hiredate,comm,deptno
+FROM emp;
+
+select *
+from emp_view2;
+
+-- 뷰 수정 ==> alter view sql 문은 없다.
+-- CREATE OR REPLA : 없으면 생성, 있으면 덮어쓰기
+CREATE OR REPLACE VIEW emp_view2
+AS
+SELECT empno,ename,job
+FROM emp;
+
+-- view DML작업 제약
+-- 테이블 생성
+create table copy_emp
+as
+select *
+from emp;
+
+select *
+from COPY_EMP;
+
+create or replace view copy_emp_view
+as
+select *
+from copy_emp; -- base table
+
+select *
+from COPY_EMP_VIEW;
+
+-- DML : base table 도 같이 수정됨 : view를 select 하면 subquery 가 실행되기 때문
+-- view 생성시 group by, distinct 등 적용시 DML 불가
+delete from COPY_EMP_VIEW
+where deptno = 20;
+
+-- DML이 불가능하도록 읽기모드 뷰 생성
+create or replace view copy_emp_view
+as
+select *
+from copy_emp
+with read only; -- DML 불가
+
+delete from COPY_EMP_VIEW -- 에러 "cannot perform a DML operation on a read-only view"
+where deptno = 10; 
+
+-- 따라서 view 목적에 부합하도록 view 생성시에는 with read only 필수로 명시.
+
+-- view는 데이터를 가지고 있는 것이 아니라 sql문을 가지고 이를 실행하는 것임.
+select *
+from user_views;
+
+-- view 삭제
+drop view emp_view10;
+
+-- 2. Sequence
+-- base table 생성
+create table copy_dept
+as
+select deptno as no, dname as name, loc as addr
+from dept
+where 1=2;
+
+select *
+from COPY_DEPT; --시퀀스를 활용하여 no컬럼 numbering
+
+-- 부서 번호를 자동으로 부여해주는 시퀀스 객체를 생성하는 SQL문
+CREATE SEQUENCE copy_dept_no_seq
+ START WITH 10
+ INCREMENT BY 10
+ MAXVALUE 100
+ MINVALUE 5
+ CYCLE -- 다시 시작값은 minvalue값부터
+ NOCACHE;
+
+CREATE SEQUENCE dept_deptno_seq2
+ START WITH 100
+ INCREMENT BY -10
+ MAXVALUE 150
+ MINVALUE 10
+ CYCLE -- 다시 시작값은 maxvalue값부터
+ NOCACHE;
+ 
+create sequence my_seq;
+
+-- 시퀀스에서 값을 가져오는 방법 : 시퀀스명.nextval ,  현재 값(넘버링) 확인 : 시퀀스명.currval
+select copy_dept_no_seq.nextval
+from dual;
+
+select copy_dept_no_seq.currval
+from dual;
+
+select dept_deptno_seq2.nextval, dept_deptno_seq2.currval
+from dual;
+
+select my_seq.nextval
+from dual;
+
+
+-- 메타정보
+-- start with 정보는 없다. => 시퀀스 수정시 start with는 수정불가.
+select *
+from USER_SEQUENCES;
+
+-- my_seq 시퀀스를 이용하여 copy_dept 테이블의 no컬럼을 넘버링.
+insert into COPY_DEPT (no, name, addr) values (my_seq.nextval, 'Arial', '설');
+insert into COPY_DEPT (no, name, addr) values (my_seq.nextval, 'Barbie', '설');
+insert into COPY_DEPT (no, name, addr) values (my_seq.nextval, 'Chen', '설');
+
+select *
+from COPY_DEPT;
+
+-- 시퀀스 삭제
+drop sequence copy_dept_no_seq;
+
+-- 3. Synonym
+-- 관리자 계정에서 실습함.
+
+-- 4. Index
+-- Index 객체가 가지고 있는 주소값 : rowid
+select rowid, empno, ename --AAAE8pAAEAAAAF/AAA
+from emp; 
+
+AAAE8p    AAE    AAAAF/  AAA
+테이블정보 파일정보 클럭정보 블럭내의행정보
+
+select *
+from emp
+where rowid = 'AAAE8pAAEAAAAF/AAA'; --값을 가장 빨리 찾을 수 있는 방법 = 주소값 직접 입력
+
+-- 1) Index 생성
+select *
+from user_indexes
+where table_name = 'EMP'; --emp테이블에는 pk인 empno때문에 index가 자동으로 생성되어있음.
+
+select *
+from emp;
+
+select *
+from emp
+where ename = 'SMITH'; --현재는 full scan / f10(계획 설명, 실행 계획) - TABLE ACCESS (FULL)
+
+-- ename에 인덱스 추가 ==> 정렬 및 B트리를 구현하는 오버헤드가 매우 크다. 따라서 인덱스는 남발하면 안된다.
+create index emp_ename_idx
+on emp(ename);
+
+select *
+from emp
+where ename = 'SMITH'; --f10(계획 설명, 실행 계획 - TABLE ACCESS (BY INDEX ROWID) / 검색 속도 향상
+
+drop index emp_ename_idx;
+
+-- 함수를 적용하면 index가 적용x
+select *
+from emp
+where upper(ename) = 'SMITH';
